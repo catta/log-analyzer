@@ -14,7 +14,7 @@ import org.apache.log4j.varia.LogFilePatternReceiver;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class LogParser
+public class LogParserChainsaw
 {
     
     @Test
@@ -117,7 +117,7 @@ public class LogParser
     {
         try
         {
-            new LogParser().parseLogFile();
+            new LogParserChainsaw().parseLogFile();
         }
         catch (Exception e)
         {
