@@ -2,7 +2,10 @@ package com.ceragon.elasticsearch;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.List;
 
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.get.MultiGetItemResponse;
@@ -14,6 +17,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.client.transport.TransportClient.Builder;
+import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -33,22 +37,60 @@ public class ElasticsearchClient
         
         // ceragonClient.nodeClient();
         
-        Client client = ceragonClient.transportClient();
-        
-        String id = ceragonClient.addNewDocument(client);
-        
-        ceragonClient.getDocument(client, id);
-        
-        int millis = 5000;
-        System.out.println("sleep " + millis);
-        Thread.sleep(millis);
+        // Client client = ceragonClient.transportClient();
+        //
+        // String id = ceragonClient.addNewDocument(client);
+        //
+        // ceragonClient.getDocument(client, id);
+        //
+        // int millis = 5000;
+        // System.out.println("sleep " + millis);
+        // Thread.sleep(millis);
+        //
+        // ceragonClient.deleteDocument(client, id);
 
-        ceragonClient.deleteDocument(client, id);
+        ceragonClient.adminClient();
 
-        client.close();
+        // client.close();
         
     }
     
+    private void adminClient() throws Exception
+    {
+
+        Builder builder = TransportClient.builder();
+        
+        builder.settings(Settings.settingsBuilder().put("cluster.name", "elasticsearch"));
+        InetSocketTransportAddress transportAddress = new InetSocketTransportAddress(InetAddress.getByName("localhost"), 9300);
+        System.out.println("transportAddress " + transportAddress);
+        
+        TransportClient client = builder.build().addTransportAddress(transportAddress);
+        
+        List<DiscoveryNode> listedNodes = client.listedNodes();
+        for (DiscoveryNode discoveryNode : listedNodes)
+        {
+            System.out.println("discoveryNode " + discoveryNode);
+        }
+
+        AdminClient adminClient = client.admin();
+        
+        String[] allIndices = adminClient.cluster().prepareState().execute().actionGet().getState().getMetaData().concreteAllIndices();
+        for (String indice : allIndices)
+        {
+            System.out.println("indice " + indice);
+        }
+
+        deleteIndices(adminClient, "logstash-2016.03.13");
+
+        client.close();
+    }
+
+    private void deleteIndices(AdminClient adminClient, String indexName)
+    {
+        DeleteIndexRequest request = new DeleteIndexRequest(indexName);
+        DeleteIndexResponse response = adminClient.indices().delete(request).actionGet();
+    }
+
     private void deleteDocument(Client client, String id)
     {
         DeleteResponse response = client.prepareDelete(INDEX, TYPE, id).get();
